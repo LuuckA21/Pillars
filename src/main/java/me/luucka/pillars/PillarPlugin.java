@@ -64,6 +64,12 @@ public abstract class PillarPlugin extends JavaPlugin {
 	@Override
 	public void onLoad() {
 		getInstance();
+
+		loadLibraries();
+	}
+
+	private void loadLibraries() {
+		this.loadLibrary("org.spongepowered", "configurate-yaml", "4.2.0");
 	}
 
 	@Override
