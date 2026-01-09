@@ -6,6 +6,11 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import lombok.Getter;
 import lombok.Setter;
+import me.luucka.pillars.PillarCore;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -66,12 +71,25 @@ public abstract class PillarCommand {
 
 		root.executes(ctx -> {
 			final CommandSender sender = ctx.getSource().getSender();
-			sender.sendMessage("§7Usage:");
-			for (PillarSubCommand sub : subs.values()) {
-				sender.sendMessage(" §7- §f" + sub.getSublabel() + " §8– " + sub.getDescription());
-			}
+			sender.sendPlainMessage("Main command info!");
 			return 1;
 		});
+
+		root.then(Commands.literal("help")
+				.executes(ctx -> {
+					final CommandSender sender = ctx.getSource().getSender();
+					buildHelper0(sender);
+					return 1;
+				})
+		);
+
+		root.then(Commands.literal("?")
+				.executes(ctx -> {
+					final CommandSender sender = ctx.getSource().getSender();
+					buildHelper0(sender);
+					return 1;
+				})
+		);
 
 		for (final PillarSubCommand sub : subs.values()) {
 			final ArgumentBuilder<CommandSourceStack, ?> node = sub.build();
@@ -87,5 +105,24 @@ public abstract class PillarCommand {
 		}
 
 		registrar.register(root.build(), description, aliases);
+	}
+
+	private void buildHelper0(final CommandSender sender) {
+		sender.sendMessage(PillarCore.component("<gray>Usage:"));
+		for (final PillarSubCommand sub : subs.values()) {
+			final Component message = Component.text("- ", NamedTextColor.GRAY)
+					.append(
+							Component.text(sub.getUsage(), NamedTextColor.WHITE)
+									.clickEvent(ClickEvent.suggestCommand(sub.getUsage()))
+									.hoverEvent(HoverEvent.showText(
+											Component.text("Click to suggest ", NamedTextColor.GRAY)
+													.append(Component.text(sub.getUsage(), NamedTextColor.GOLD))
+									))
+					)
+					.append(Component.text(" – ", NamedTextColor.GRAY))
+					.append(Component.text(sub.getDescription(), NamedTextColor.YELLOW));
+
+			sender.sendMessage(message);
+		}
 	}
 }
