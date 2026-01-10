@@ -28,6 +28,10 @@ public abstract class PillarSubCommand {
 	@Setter
 	protected boolean playerOnly = false;
 
+	protected boolean requires(final CommandSourceStack source) {
+		return true;
+	}
+
 	public PillarSubCommand(final PillarCommand parent, final String sublabel) {
 		this.parent = parent;
 		this.sublabel = sublabel;

@@ -7,6 +7,7 @@ import io.papermc.paper.command.brigadier.Commands;
 import lombok.Getter;
 import lombok.Setter;
 import me.luucka.pillars.PillarCore;
+import me.luucka.pillars.util.PillarLog;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -36,6 +37,14 @@ public abstract class PillarCommand {
 	@Setter
 	private boolean playerOnly = false;
 
+	@Getter
+	@Setter
+	private boolean handleHelp = true;
+
+	protected boolean requires(final CommandSourceStack source) {
+		return true;
+	}
+
 	public PillarCommand(final String label) {
 		this(label, new ArrayList<>());
 	}
@@ -47,26 +56,27 @@ public abstract class PillarCommand {
 
 	private final Map<String, PillarSubCommand> subs = new LinkedHashMap<>();
 
-	protected final void registerSub(PillarSubCommand sub) {
+	protected final void registerSubcommand(final PillarSubCommand sub) {
 		subs.put(sub.getSublabel().toLowerCase(Locale.ROOT), sub);
 	}
 
-	/**
-	 * Override se vuoi registrare i subcommands nel costruttore o in init()
-	 */
-	protected void init() {
-	}
+	protected abstract void registerSubcommands();
 
 	public final void register(io.papermc.paper.command.brigadier.Commands registrar) {
-		init();
+		registerSubcommands();
 
 		final LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal(label);
 
 		root.requires(src -> {
 			final CommandSender sender = src.getSender();
-			if (playerOnly && !(sender instanceof Player)) return false;
+			if (playerOnly && !(sender instanceof Player)) {
+				return false;
+			}
 			final String perm = permission;
-			return perm == null || perm.isBlank() || sender.hasPermission(perm);
+			if (perm != null && !sender.hasPermission(perm)) {
+				return false;
+			}
+			return requires(src);
 		});
 
 		root.executes(ctx -> {
@@ -74,6 +84,36 @@ public abstract class PillarCommand {
 			sender.sendPlainMessage("Main command info!");
 			return 1;
 		});
+
+		addHelpSubcommand0(root);
+
+		for (final PillarSubCommand sub : subs.values()) {
+			if ("help".equalsIgnoreCase(sub.getSublabel()) || "?".equalsIgnoreCase(sub.getSublabel())) {
+				PillarLog.error("Subcommand with label 'help' or '?' is reserved for help command!");
+				continue;
+			}
+
+			final ArgumentBuilder<CommandSourceStack, ?> node = sub.build();
+			node.requires(src -> {
+				final CommandSender sender = src.getSender();
+				if (sub.isPlayerOnly() && !(sender instanceof Player)) {
+					return false;
+				}
+				final String perm = sub.getPermission();
+				if (perm != null && !sender.hasPermission(perm)) {
+					return false;
+				}
+				return sub.requires(src);
+			});
+
+			root.then(node);
+		}
+
+		registrar.register(root.build(), description, aliases);
+	}
+
+	private void addHelpSubcommand0(final LiteralArgumentBuilder<CommandSourceStack> root) {
+		if (!handleHelp) return;
 
 		root.then(Commands.literal("help")
 				.executes(ctx -> {
@@ -90,21 +130,6 @@ public abstract class PillarCommand {
 					return 1;
 				})
 		);
-
-		for (final PillarSubCommand sub : subs.values()) {
-			final ArgumentBuilder<CommandSourceStack, ?> node = sub.build();
-
-			node.requires(src -> {
-				final CommandSender sender = src.getSender();
-				if (sub.isPlayerOnly() && !(sender instanceof Player)) return false;
-				final String perm = sub.getPermission();
-				return perm == null || perm.isBlank() || sender.hasPermission(perm);
-			});
-
-			root.then(node);
-		}
-
-		registrar.register(root.build(), description, aliases);
 	}
 
 	private void buildHelper0(final CommandSender sender) {

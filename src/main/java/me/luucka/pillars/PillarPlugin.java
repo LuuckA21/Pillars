@@ -1,5 +1,8 @@
 package me.luucka.pillars;
 
+import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import me.luucka.pillars.language.Lang;
 import me.luucka.pillars.library.BukkitLibraryManager;
 import me.luucka.pillars.library.Library;
 import me.luucka.pillars.library.LibraryManager;
@@ -35,6 +38,18 @@ public abstract class PillarPlugin extends JavaPlugin {
 		return instance != null;
 	}
 
+	protected void onPillarLoad() {
+	}
+
+	protected void onPillarStart() {
+	}
+
+	protected void onPillarDisable() {
+	}
+
+	protected void onPluginReload() {
+	}
+
 	/**
 	 * The library manager used to load third party libraries.
 	 */
@@ -62,18 +77,50 @@ public abstract class PillarPlugin extends JavaPlugin {
 	}
 
 	@Override
-	public void onLoad() {
-		getInstance();
+	public final void onLoad() {
+		try {
+			getInstance();
 
-		loadLibraries();
+			PillarLibraries.load(this);
+
+			this.onPillarLoad();
+		} catch (final Throwable t) {
+			this.setEnabled(false);
+			throw t;
+		}
 	}
 
-	private void loadLibraries() {
-		this.loadLibrary("org.spongepowered", "configurate-yaml", "4.2.0");
+	@Override
+	public final void onEnable() {
+		reload();
+		this.getLifecycleManager().registerEventHandler(
+				LifecycleEvents.COMMANDS,
+				event -> {
+					Commands registrar = event.registrar();
+
+					PillarCommandRegisterScanner.scanAndLoad(registrar);
+				}
+		);
+
+		this.onPillarStart();
+	}
+
+	@Override
+	public final void onDisable() {
+		this.onPillarDisable();
+	}
+
+	public final void reload() {
+		Lang.load();
+		this.onPluginReload();
 	}
 
 	@Override
 	public final File getFile() {
 		return super.getFile();
+	}
+
+	public final ClassLoader getPluginClassLoader() {
+		return super.getClassLoader();
 	}
 }

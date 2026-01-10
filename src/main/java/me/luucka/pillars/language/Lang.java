@@ -1,4 +1,4 @@
-package me.luucka.pillars.setting;
+package me.luucka.pillars.language;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
