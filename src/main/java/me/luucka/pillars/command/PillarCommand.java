@@ -2,6 +2,7 @@ package me.luucka.pillars.command;
 
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import lombok.Getter;
@@ -62,6 +63,12 @@ public abstract class PillarCommand {
 
 	protected abstract void registerSubcommands();
 
+	protected int execute(CommandContext<CommandSourceStack> context) {
+		final CommandSender sender = context.getSource().getSender();
+		sender.sendMessage(PillarCore.component("The <label> command does not have a main command!", "<label>", getLabel()));
+		return 1;
+	}
+
 	public final void register(io.papermc.paper.command.brigadier.Commands registrar) {
 		registerSubcommands();
 
@@ -79,11 +86,7 @@ public abstract class PillarCommand {
 			return requires(src);
 		});
 
-		root.executes(ctx -> {
-			final CommandSender sender = ctx.getSource().getSender();
-			sender.sendPlainMessage("Main command info!");
-			return 1;
-		});
+		root.executes(this::execute);
 
 		addHelpSubcommand0(root);
 
